@@ -1,0 +1,178 @@
+
+\documentclass[a4paper,12pt]{article}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[english]{babel}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{listings}
+
+\lstset{tabsize=3, basicstyle=\ttfamily\small, commentstyle=\itshape\rmfamily, numbers=left, numberstyle=\tiny, language=java,moredelim=[il][\sffamily]{?},mathescape=true,showspaces=false,showstringspaces=false,columns=fullflexible,xleftmargin=5pt,escapeinside={(@}{@)}, morekeywords=[1]{let,if,then,else}}
+\lstloadlanguages{Java, Haskell}
+
+\newcommand{\kwa}[1]{\mathtt{#1}}
+\newcommand{\kw}[1]{\mathtt{#1}~}
+
+\begin{document}
+
+\section{Prim's Algorithm}
+
+\subsection{Pseudocode}
+\begin{lstlisting}
+Prims(graph) {
+
+   // initialise
+   mst = $\varnothing$, fringe = $\varnothing$
+   start = any node in graph
+   fringe.add(<start, null, 0>)
+   
+   // main loop
+   while (mst.numNodes != graph.numNodes && fringe $\neq$ $\varnothing$) {
+      <node, edge, cost> = fringe.pop()
+      if (node $\in$ mst) continue
+      mst.addNode(node)
+      mst.addEdge(edge)
+      for (neigh $\in$ node.neighbours()) {
+         edge = edgeBetween(neigh, node)
+         if (neigh $\notin$ mst) fringe.add(<neigh, edge, edge.length>)
+      }
+   }
+   
+   if (mst.numNodes $\neq$ graph.numNodes) return null
+   else return mst
+}
+\end{lstlisting}
+
+\noindent
+This algorithm builds up another graph called $\kwa{mst}$ (minimum spanning tree). It does this by considering nodes to visit. When you visit a node along a particular edge, the node and the edge get added to $\kwa{mst}$. All edges incident to that node are then added to the fringe. This process repeats until $\kwa{mst}$ has the same number of nodes as $\kwa{graph}$ (meaning you have a tree), or the fringe is empty (when the graph is not connected). In the latter case, no minimum spanning tree exists, so we return $\kwa{null}$ to signify this.
+
+Triples in the queue are ordered by their cost. A triple with a lower cost takes precedence over a triple with a higher cost. The cost is the weight on the edge in the triple.
+
+\subsection{Complexity}
+
+There are two main operations being performed: adding to the fringe (line 16) and popping off the fringe (line 10). In a heap of size $S$, both operations will be $\mathcal{O}(log(S))$. The number of times we add, plus the number of times we pop, will give us the complexity of this algorithm.
+
+Each edge can get added at most once to the fringe. To see this, consider an edge $(A, B)$. This could get added when we visit $A$ or when we visit $B$ --- but once we've visited one, the edge won't get added again when visiting the other, because of the check on line 16. The size of the fringe is therefore $\mathcal{O}(E)$. We may have to pop every edge in the fringe --- this gives the cost of popping as $\mathcal{O}(E \cdot log(E))$.
+
+The inner loop considers every neighbour of the current node under consideration. In an undirected graph, each edge belongs to exactly two neighbourhoods: the edge $(A,B)$ is in both $A.neighbours()$ and $B.neighbours()$. Therefore, the size of all the neighbourhoods of all the nodes in the graph is going to be $2 \cdot E = \mathcal{O}(E)$. The number of times we add to the fringe is at most $\mathcal{O}(E \cdot log(E))$.
+
+Putting this together, the cost of Prim's is $\mathcal{O}(E \cdot log(E) + E \cdot log(E)) = \mathcal{O}(E \cdot log(E))$.
+
+\section{Kruskal's Algorithm}
+
+The idea behind Kruskal's algorithm is to repeatedly merge subtrees in the graph to produce the minimal spanning tree. A set of trees is called a \textit{forest}. To begin with, every node is its own size one tree. Kruskal's repeatedly chooses the edge with the lowest weight, and if the nodes on either side belong to different trees, the two trees are merged.
+
+\subsection{Pseudocode}
+
+\begin{lstlisting}
+Kruskals(graph) {
+
+   // initialise priority queue with all edges in the graph
+   pq = $\{$<edge.from, edge.to, edge.cost> $\mid$ edge $\in$ graph.edges()$\}$
+  
+   // initialise all subtrees
+   forest = $\{$ $\{$node$\}$ $\mid$  node $\in$ graph.nodes() $\}$
+
+   // repeatedly choose edge w/ lowest weight
+   // merge the two subtrees on either side
+   while (|forest| $\neq$ 1 && pq $\neq$ $\varnothing$) {
+      <n$_1$, n$_2$, length> = pq.pop()
+      tree$_1$ = the set in forest containing n$_1$
+      tree$_2$ = the set in forest containing n$_2$
+      if (tree$_1$ $\neq$ tree$_2$) {
+         merge tree$_1$ and tree$_2$ in forest
+      }
+   }
+   
+   if ($| \kwa{forest} | = 1$) return the set in forest
+   else return $\kwa{forest}$
+}
+
+\end{lstlisting}
+
+\noindent
+The priority queue contains every edge in the graph. An edge with a low weight has precedence over an edge with a high weight. The priority queue is initialised on line 4. $\kwa{forest}$ is the set of all subtrees. Initially, each node belongs to its own subtree of size one --- this initialisation takes place on line 7.
+
+The main loop works by repeatedly merging subtrees. When there is only one subtree, i.e. $\kwa{ |forest|} = 1$, we have found the minimum spanning tree. Otherwise the queue has exhausted every edge --- then $\kwa{forest}$ will contain the minimum spanning trees of every component in the graph.
+
+The main loop works by selecting the next lowest cost edge $(n_1, n_2)$ and then finding the subtrees to which $n_1$ and $n_2$ belong. These subtrees are called $\kwa{tree}_1$ and $\kwa{tree}_2$ respectively. If they are different, i.e. $n_1$ and $n_2$ belong to different subtrees, then the trees are merged.
+
+\subsection{Complexity}
+
+The main loop executes $\mathcal{O}(E)$ times (once per edge). Per iteration, we have to pop an element off the priority queue, perform two $\kwa{find}$ operations (lines 14 and 15) and a $\kwa{merge}$ operation (line 16). The cost is therefore $\mathcal{O}(E \cdot (T(pop) + T(merge) + T(find)))$.
+
+If we use a Java priority queue, $T(pop) = \mathcal{O}(log(E))$. A naive implementation of the forest can achieve merging and finding in $\mathcal{O}(N)$ time. A (naive) version of Kruskal's therefore has the complexity $\mathcal{O}(E \cdot (log(E) + N) = \mathcal{O}(E \cdot log(E) + E \cdot N)$.
+
+If we store the forest in a union-find data-set (described in the next section), then finding can be done in $\mathcal{O}(log(N))$ time and unioning in $\mathcal{O}(1)$ time. This gives a complexity of $\mathcal{O}(E \cdot log(E) + E \cdot log(N))$.
+
+The optimised version of union-find can merge in $\mathcal{O}(1)$ time and find in $|mathcal{O}(\alpha(N))$ time, where $\alpha(N)$ is the inverse Ackermann function. The inverse Ackermann function is extremely slow growing. For realistic inputs, it is like a constant factor. Using the optimised version of union-find, we get a complexity of $\mathcal{O}(E \cdot log(E) + E \cdot \alpha(N))$.
+
+\section{Union-Find}
+
+The union-find data structure is for storing sets of sets. More generally, union-find can be used to store any equivalence relation. It can do two things fast:
+
+\begin{enumerate}
+	\item Find: look up which set an element belongs in.
+	\item Union: merge two sets.
+\end{enumerate}
+
+\noindent
+The basic idea is as follows. Each set has one representative. Each node has a parent field. By following the parent field, you get to the representative for that set. It's like a tree that gets traversed from bottom-to-top, rather than top-to-bottom (as is done in, say, a binary search tree). The parent of a representative is itself.
+
+\subsection{Pseudocode}
+
+A basic class storing the data structure may look like the following.
+
+\begin{lstlisting}
+class Node {
+   Node parent;
+}
+
+class UnionFind {
+   Set<Node> reps;
+   void union(Node n1, Node n2) { ... }
+   Node find(Node n) { ... }
+}
+\end{lstlisting}
+
+\noindent
+A $\kwa{Node}$ has a single field $\kwa{parent}$. $\kwa{reps}$ is the set of all representatives in the tree. At any particular node, you find its set by repeatedly following the $\kwa{parent}$ field to get its representative. Pseudocode for $\kwa{find}$ and $\kwa{union}$ is given below.
+
+\begin{lstlisting}
+union(x, y) {
+   xroot = find(x)
+   yroot = find(y)
+   if (xroot $\neq$ yroot) {
+      xroot.parent = yroot
+      reps.remove(xroot)
+   }
+}
+\end{lstlisting}
+
+\begin{lstlisting}
+find(x) {
+   if (x.parent $\neq$ x) {
+      x.parent = find(x.parent)
+   }
+   return x.parent
+}
+\end{lstlisting}
+
+\noindent
+$\kwa{union}$ works by finding the representatives for $x$ ($xroot$) and $y$ ($yroot$). If the two roots are the same, then $x$ and $y$ belong to the same set, so unioning should do nothing. Otherwise, the parent of one root is set to be the other root, and the other root is removed from the set of representatives. A small improvement on $\kwa{union}$ can be made by always subsuming the smaller tree within the larger. For example, if the height of the tree with $xroot$ at its head is smaller than the height of the tree with $yroot$ at its head, then $xroot$ should have its parent set to $yroot$. This can be done by having each node store an additional depth field which is accordingly updated whenever $\kwa{union}$ is called.
+
+$\kwa{find(n)}$ works by recursively calling find on the parent of $\kwa{n}$. This shall return the root node/representative of $\kwa{n}$. The parent of $\kwa{n}$ is set to be the root node. This collapses the tree, so that future invocations of $\kwa{find}(n)$ don't have to traverse up the tree again. The base case is when a node is its own parent --- then the node is a representative, so it returns itself.
+
+
+\subsection{Improvements}
+
+$\kwa{union}$ calls $\kwa{find}$ twice and then does a constant number of operations, so $\mathcal{O}(T(union)) = \mathcal{O}(T(find))$. With our optimised, path-compressing version of $\kwa{find}$, this is $\mathcal{O}(\alpha(N))$, where $\alpha$ is the inverse Ackermann function. The inverse Ackermann function is extremely slow growing. For realistic input sizes, it is like a constant.
+
+\end{document}
+
+
+
+
+
+
